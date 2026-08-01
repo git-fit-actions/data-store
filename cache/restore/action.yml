@@ -1,0 +1,33 @@
+name: Data store cache restore
+description: Restore a data source from the GitFit cache before syncing.
+author: Lax
+branding:
+  icon: download
+  color: blue
+
+inputs:
+  source:
+    description: Data source name (e.g. keep) used in cache keys, paths and step titles.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: '[${{ inputs.source }}] Validate source'
+      shell: bash
+      env:
+        SOURCE: ${{ inputs.source }}
+      run: |
+        if ! [[ "$SOURCE" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+          echo "::error::Invalid source '$SOURCE' (must match ^[a-z0-9][a-z0-9_-]*$)" >&2
+          exit 1
+        fi
+    - name: '[${{ inputs.source }}] Restore from cache'
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          data/raw/${{ inputs.source }}
+          data/std/${{ inputs.source }}
+        key: GitFit-data-${{ inputs.source }}-v0-cold
+        restore-keys: |
+          GitFit-data-${{ inputs.source }}-v0-

@@ -1,0 +1,61 @@
+name: Test data-store
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: raven-actions/actionlint@v2
+
+  smoke-save:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create test data
+        run: |
+          mkdir -p data/raw/keep data/std/keep
+          printf 'hello\n' > data/raw/keep/a.txt
+          printf 'world\n' > data/std/keep/b.txt
+      - name: Save to cache
+        id: save
+        uses: ./cache/save
+        with:
+          source: keep
+      - name: Assert changed=true
+        run: test "${{ steps.save.outputs.changed }}" = "true"
+
+  smoke-restore:
+    runs-on: ubuntu-latest
+    needs: smoke-save
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore from cache
+        id: restore
+        uses: ./cache/restore
+        with:
+          source: keep
+      - name: Assert files restored
+        run: |
+          test -f data/raw/keep/a.txt
+          test -f data/std/keep/b.txt
+
+  invalid-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Invalid source must fail
+        id: invalid
+        continue-on-error: true
+        uses: ./cache/save
+        with:
+          source: 'bad source'
+      - name: Assert invalid failed
+        run: test "${{ steps.invalid.outcome }}" = "failure"
