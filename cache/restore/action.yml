@@ -28,6 +28,9 @@ runs:
         path: |
           data/raw/${{ inputs.source }}
           data/std/${{ inputs.source }}
-        key: GitFit-data-${{ inputs.source }}-v0-cold
+        # exact key: sentinel — never written by any save; forces prefix fallback to the most recent cache.
+        key: GitFit-data-${{ inputs.source }}-v0-sentinel
+        # prefix match: hits the most recently created cache sharing the -v0- prefix,
+        # including per-run -v0-{run} sync caches and -v0-snapshot recovery caches from unarchive.
         restore-keys: |
           GitFit-data-${{ inputs.source }}-v0-
