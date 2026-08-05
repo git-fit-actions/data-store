@@ -1,5 +1,5 @@
 name: Data store cache restore
-description: Restore a data source from the GitFit cache before syncing.
+description: Restore data sources from the GitFit cache before syncing.
 author: Lax
 branding:
   icon: download
@@ -7,30 +7,12 @@ branding:
 
 inputs:
   source:
-    description: Data source name (e.g. keep) used in cache keys, paths and step titles.
-    required: true
+    description: Single data source name (legacy; prefer sources). Must match ^[a-z0-9][a-z0-9_-]*$.
+    required: false
+  sources:
+    description: Comma- or newline-separated list of data source names. Each must match ^[a-z0-9][a-z0-9_-]*$.
+    required: false
 
 runs:
-  using: composite
-  steps:
-    - name: '[${{ inputs.source }}] Validate source'
-      shell: bash
-      env:
-        SOURCE: ${{ inputs.source }}
-      run: |
-        if ! [[ "$SOURCE" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
-          echo "::error::Invalid source '$SOURCE' (must match ^[a-z0-9][a-z0-9_-]*$)" >&2
-          exit 1
-        fi
-    - name: '[${{ inputs.source }}] Restore from cache'
-      uses: actions/cache/restore@v6
-      with:
-        path: |
-          data/raw/${{ inputs.source }}
-          data/std/${{ inputs.source }}
-        # exact key: sentinel — never written by any save; forces prefix fallback to the most recent cache.
-        key: GitFit-data-${{ inputs.source }}-v0-sentinel
-        # prefix match: hits the most recently created cache sharing the -v0- prefix,
-        # including per-run -v0-{run} sync caches and -v0-snapshot recovery caches from unarchive.
-        restore-keys: |
-          GitFit-data-${{ inputs.source }}-v0-
+  using: node24
+  main: dist/index.js

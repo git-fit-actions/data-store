@@ -1,0 +1,22 @@
+{
+  "name": "data-store",
+  "version": "2.0.0",
+  "private": true,
+  "description": "GitHub Actions for caching and restoring git-fit data sources (L1 raw / L2 std).",
+  "license": "MIT",
+  "scripts": {
+    "build": "esbuild src/restore.ts --bundle --platform=node --target=node20 --format=cjs --outfile=cache/restore/dist/index.js && esbuild src/save.ts --bundle --platform=node --target=node20 --format=cjs --outfile=cache/save/dist/index.js && esbuild src/shared.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/shared.cjs",
+    "build:check": "npm run build && git diff --exit-code -- cache/restore/dist cache/save/dist dist/shared.cjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.cjs"
+  },
+  "dependencies": {
+    "@actions/cache": "6.2.0",
+    "@actions/core": "3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0"
+  }
+}

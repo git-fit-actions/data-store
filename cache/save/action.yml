@@ -1,5 +1,5 @@
 name: Data store cache save
-description: Detect changes, refresh checksums and save a data source to the GitFit cache after syncing.
+description: Detect changes, refresh checksums and save data sources to the GitFit cache after syncing.
 author: Lax
 branding:
   icon: upload
@@ -7,68 +7,20 @@ branding:
 
 inputs:
   source:
-    description: Data source name (e.g. keep) used in cache keys, paths and step titles.
-    required: true
+    description: Single data source name (legacy; prefer sources). Must match ^[a-z0-9][a-z0-9_-]*$.
+    required: false
+  sources:
+    description: Comma- or newline-separated list of data source names. Each must match ^[a-z0-9][a-z0-9_-]*$.
+    required: false
 
 outputs:
   changed:
-    description: Whether any managed directory changed.
-    value: ${{ steps.check.outputs.changed }}
+    description: Whether any source changed (comma-joined per-source results).
+  changed_sources:
+    description: Comma-joined list of changed sources (empty if none).
+  unchanged_sources:
+    description: Comma-joined list of unchanged sources (empty if none).
 
 runs:
-  using: composite
-  steps:
-    - name: '[${{ inputs.source }}] Validate source'
-      shell: bash
-      env:
-        SOURCE: ${{ inputs.source }}
-      run: |
-        if ! [[ "$SOURCE" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
-          echo "::error::Invalid source '$SOURCE' (must match ^[a-z0-9][a-z0-9_-]*$)" >&2
-          exit 1
-        fi
-    - name: '[${{ inputs.source }}] Check for changes'
-      id: check
-      shell: bash
-      env:
-        SOURCE: ${{ inputs.source }}
-      run: |
-        CHANGED=false
-        for dir in "data/raw/$SOURCE" "data/std/$SOURCE"; do
-          if [ ! -d "$dir" ]; then
-            echo "absent: $dir (nothing to save)"
-            continue
-          fi
-          fresh="$(cd "$dir" && find . -type f ! -name 'SHA256SUMS' -print0 | sort -z | xargs -0 sha256sum)"
-          if [ -f "$dir/SHA256SUMS" ]; then
-            baseline="$(cat "$dir/SHA256SUMS")"
-            if (cd "$dir" && sha256sum --check --quiet SHA256SUMS >/dev/null 2>&1) && [ "$baseline" = "$fresh" ]; then
-              echo "unchanged: $dir"
-            else
-              echo "changed: $dir"
-              CHANGED=true
-            fi
-          else
-            echo "no baseline: $dir"
-            CHANGED=true
-          fi
-        done
-        echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
-    - name: '[${{ inputs.source }}] Generate SHA256SUMS'
-      shell: bash
-      env:
-        SOURCE: ${{ inputs.source }}
-      run: |
-        for dir in "data/raw/$SOURCE" "data/std/$SOURCE"; do
-          if [ -d "$dir" ]; then
-            (cd "$dir" && find . -type f ! -name 'SHA256SUMS' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
-          fi
-        done
-    - name: '[${{ inputs.source }}] Save to cache'
-      if: steps.check.outputs.changed == 'true'
-      uses: actions/cache/save@v6
-      with:
-        path: |
-          data/raw/${{ inputs.source }}
-          data/std/${{ inputs.source }}
-        key: GitFit-data-${{ inputs.source }}-v0-${{ github.run_number }}-${{ github.run_id }}${{ github.run_attempt > 1 && format('-{0}', github.run_attempt) || '' }}
+  using: node24
+  main: dist/index.js

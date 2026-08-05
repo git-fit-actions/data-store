@@ -1,0 +1,26 @@
+name: Check dist
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  check-dist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Assert dist is up to date
+        run: |
+          if ! git diff --exit-code -- cache/restore/dist cache/save/dist dist/shared.cjs; then
+            echo "::error::dist is out of date. Run 'npm run build' and commit the result."
+            exit 1
+          fi

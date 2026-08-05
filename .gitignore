@@ -7,3 +7,7 @@ desktop.ini
 *~
 *.swp
 *.swo
+
+# Node
+node_modules/
+*.tsbuildinfo
