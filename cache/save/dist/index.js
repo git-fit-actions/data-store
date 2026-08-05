@@ -67458,6 +67458,7 @@ async function run() {
   let anyChanged = false;
   const changedSources = [];
   const unchangedSources = [];
+  const failedSources = [];
   for (const src of sources) {
     const dirs = sourcePaths(src).filter(isDirectory2);
     if (dirs.length === 0) {
@@ -67481,8 +67482,15 @@ async function run() {
       changedSources.push(src);
       const { runKey } = buildCacheKeys(src);
       info(`[${src}] Changed, saving to cache...`);
-      await saveCache2(dirs, runKey);
-      info(`[${src}] Saved (key: ${runKey})`);
+      const saved = await saveCache2(dirs, runKey);
+      if (saved) {
+        info(`[${src}] Saved (key: ${runKey})`);
+      } else {
+        failedSources.push(src);
+        warning(
+          `[${src}] Save failed: another job may be creating this cache (key: ${runKey}); data is unchanged locally`
+        );
+      }
     } else {
       unchangedSources.push(src);
       info(`[${src}] Unchanged, skipped`);
@@ -67491,6 +67499,7 @@ async function run() {
   setOutput("changed", anyChanged ? "true" : "false");
   setOutput("changed_sources", changedSources.join(","));
   setOutput("unchanged_sources", unchangedSources.join(","));
+  setOutput("save_errors", failedSources.join(","));
 }
 run().catch((err) => {
   setFailed(err instanceof Error ? err.message : String(err));

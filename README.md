@@ -88,6 +88,7 @@ Reserved source names (rejected): `source`, `sources`, `changed`,
 | `cache/save` | `changed` | `true` if any source changed. |
 | `cache/save` | `changed_sources` | Comma-joined list of changed sources (empty if none). |
 | `cache/save` | `unchanged_sources` | Comma-joined list of unchanged sources (empty if none). |
+| `cache/save` | `save_errors` | Comma-joined list of sources whose cache upload failed (another job reserved the key). Empty if all changed sources saved. Local data is untouched. |
 | `cache/save` | `changed_<source>` | Per-source change status, e.g. `changed_keep`. Dynamic output: not declared in the metadata, documented here only. |
 
 The write-once action exposes no outputs (post outputs are not readable by

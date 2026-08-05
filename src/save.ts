@@ -18,6 +18,7 @@ async function run(): Promise<void> {
   let anyChanged = false;
   const changedSources: string[] = [];
   const unchangedSources: string[] = [];
+  const failedSources: string[] = [];
 
   for (const src of sources) {
     const dirs = sourcePaths(src).filter(isDirectory);
@@ -46,8 +47,15 @@ async function run(): Promise<void> {
       changedSources.push(src);
       const { runKey } = buildCacheKeys(src);
       core.info(`[${src}] Changed, saving to cache...`);
-      await saveCache(dirs, runKey);
-      core.info(`[${src}] Saved (key: ${runKey})`);
+      const saved = await saveCache(dirs, runKey);
+      if (saved) {
+        core.info(`[${src}] Saved (key: ${runKey})`);
+      } else {
+        failedSources.push(src);
+        core.warning(
+          `[${src}] Save failed: another job may be creating this cache (key: ${runKey}); data is unchanged locally`
+        );
+      }
     } else {
       unchangedSources.push(src);
       core.info(`[${src}] Unchanged, skipped`);
@@ -57,6 +65,7 @@ async function run(): Promise<void> {
   core.setOutput("changed", anyChanged ? "true" : "false");
   core.setOutput("changed_sources", changedSources.join(","));
   core.setOutput("unchanged_sources", unchangedSources.join(","));
+  core.setOutput("save_errors", failedSources.join(","));
 }
 
 run().catch((err: unknown) => {

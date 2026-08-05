@@ -20,6 +20,8 @@ outputs:
     description: Comma-joined list of changed sources (empty if none).
   unchanged_sources:
     description: Comma-joined list of unchanged sources (empty if none).
+  save_errors:
+    description: Comma-joined list of sources whose cache upload failed (e.g. another job reserved the key); data is unchanged locally. Empty if all changed sources saved.
 
 runs:
   using: node24
