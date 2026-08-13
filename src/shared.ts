@@ -293,3 +293,17 @@ export function writeSummary(
   }
   fs.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
 }
+
+/**
+ * Compress a cache key for the transposed per-source summary table. Strips
+ * the `GitFit-data-<source>-v0-` prefix (the source is already the column
+ * header), keeping the run-id segment (`465-31605754520`) and preserving the
+ * `snapshot` marker (`snapshot-11-31563297179`). Empty key → `—` (miss).
+ */
+export function shortCacheKey(source: string, key: string): string {
+  if (!key) {
+    return "—";
+  }
+  const prefix = `GitFit-data-${source}-v0-`;
+  return key.startsWith(prefix) ? key.slice(prefix.length) : key;
+}

@@ -43,6 +43,7 @@ __export(shared_exports, {
   listDataFiles: () => listDataFiles,
   parseChecksumFile: () => parseChecksumFile,
   parseSources: () => parseSources,
+  shortCacheKey: () => shortCacheKey,
   sourcePaths: () => sourcePaths,
   writeSummary: () => writeSummary
 });
@@ -242,6 +243,13 @@ function writeSummary(heading, headers, rows, footer, filePath) {
   }
   fs.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
 }
+function shortCacheKey(source, key) {
+  if (!key) {
+    return "\u2014";
+  }
+  const prefix = `GitFit-data-${source}-v0-`;
+  return key.startsWith(prefix) ? key.slice(prefix.length) : key;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   SOURCE_RE,
@@ -257,6 +265,7 @@ function writeSummary(heading, headers, rows, footer, filePath) {
   listDataFiles,
   parseChecksumFile,
   parseSources,
+  shortCacheKey,
   sourcePaths,
   writeSummary
 });

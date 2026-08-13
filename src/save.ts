@@ -6,6 +6,7 @@ import {
   generateSHA256SUMS,
   isDirectory,
   parseSources,
+  shortCacheKey,
   sourcePaths,
   writeSummary,
 } from "./shared";
@@ -20,7 +21,8 @@ async function run(): Promise<void> {
   const changedSources: string[] = [];
   const unchangedSources: string[] = [];
   const failedSources: string[] = [];
-  const rows: string[][] = [];
+  const statuses: string[] = [];
+  const keys: string[] = [];
 
   for (const src of sources) {
     const dirs = sourcePaths(src).filter(isDirectory);
@@ -29,7 +31,8 @@ async function run(): Promise<void> {
       core.info(`[${src}] No managed directories exist, skipping`);
       core.setOutput(`changed_${src}`, "false");
       unchangedSources.push(src);
-      rows.push([src, "skipped", "—"]);
+      statuses.push("skipped");
+      keys.push("—");
       continue;
     }
 
@@ -53,18 +56,21 @@ async function run(): Promise<void> {
       const saved = await saveCache(dirs, runKey);
       if (saved) {
         core.info(`[${src}] Saved (key: ${runKey})`);
-        rows.push([src, "saved", runKey]);
+        statuses.push("saved");
+        keys.push(shortCacheKey(src, runKey));
       } else {
         failedSources.push(src);
         core.warning(
           `[${src}] Save failed: another job may be creating this cache (key: ${runKey}); data is unchanged locally`
         );
-        rows.push([src, "failed", runKey]);
+        statuses.push("failed");
+        keys.push(shortCacheKey(src, runKey));
       }
     } else {
       unchangedSources.push(src);
       core.info(`[${src}] Unchanged, skipped`);
-      rows.push([src, "unchanged", "—"]);
+      statuses.push("unchanged");
+      keys.push("—");
     }
   }
 
@@ -74,7 +80,15 @@ async function run(): Promise<void> {
   core.setOutput("save_errors", failedSources.join(","));
 
   const footer = `Changed: ${changedSources.length} / Unchanged: ${unchangedSources.length} / Errors: ${failedSources.length}`;
-  writeSummary("data-store save", ["Source", "Status", "Cache key"], rows, footer);
+  writeSummary(
+    "data-store save",
+    ["Source", ...sources],
+    [
+      ["Status", ...statuses],
+      ["Cache key", ...keys],
+    ],
+    footer
+  );
 }
 
 run().catch((err: unknown) => {

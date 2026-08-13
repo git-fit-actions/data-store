@@ -96,14 +96,18 @@ earlier steps).
 
 ## Step summaries
 
-Both actions append a markdown block to the job step summary:
+Both actions append a markdown block to the job step summary, laid out
+horizontally (sources as columns) to keep the block compact:
 
-- `cache/restore` → `### GitFit data-store restore`, one row per source
-  (`| Source | Status | Cache key |`); status is `hit` (with the matched key) or
-  `miss`.
-- `cache/save` → `### GitFit data-store save`, one row per source plus a
-  `Changed: N / Unchanged: M / Errors: K` footer; status is `saved`, `unchanged`,
-  `skipped` (no managed directories) or `failed`.
+- `cache/restore` → `### GitFit data-store restore`: header row lists every
+  source, then a `Status` row (`hit` / `miss`) and a `Cache key` row.
+- `cache/save` → `### GitFit data-store save`: header row lists every source,
+  then `Status` (`saved` / `unchanged` / `skipped` / `failed`) and `Cache key`
+  rows, plus a `Changed: N / Unchanged: M / Errors: K` footer.
+
+Cache keys are shown shortened: the `GitFit-data-<source>-v0-` prefix is
+stripped (the source is the column header), keeping the run-id segment
+(`465-31605754520`) and the `snapshot` marker (`snapshot-11-31563297179`).
 
 The write-once root action produces both blocks: restore in `main`, save in
 `post` (post cannot surface outputs, so the summary is the only channel).

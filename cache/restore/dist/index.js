@@ -66756,6 +66756,13 @@ function writeSummary(heading, headers, rows, footer, filePath) {
   }
   fs5.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
 }
+function shortCacheKey(source, key) {
+  if (!key) {
+    return "\u2014";
+  }
+  const prefix2 = `GitFit-data-${source}-v0-`;
+  return key.startsWith(prefix2) ? key.slice(prefix2.length) : key;
+}
 
 // src/restore.ts
 async function run() {
@@ -66763,20 +66770,26 @@ async function run() {
     getInput("sources") || void 0,
     getInput("source") || void 0
   );
-  const rows = [];
+  const statuses = [];
+  const keys = [];
   for (const src of sources) {
     const { sentinel, prefix: prefix2 } = buildCacheKeys(src);
     info(`[${src}] Restoring from cache...`);
     const matchedKey = await restoreCache(sourcePaths(src), sentinel, [prefix2]);
     if (matchedKey) {
       info(`[${src}] Restored (key: ${matchedKey})`);
-      rows.push([src, "hit", matchedKey]);
+      statuses.push("hit");
+      keys.push(shortCacheKey(src, matchedKey));
     } else {
       info(`[${src}] No cache found, skipped`);
-      rows.push([src, "miss", "\u2014"]);
+      statuses.push("miss");
+      keys.push("\u2014");
     }
   }
-  writeSummary("data-store restore", ["Source", "Status", "Cache key"], rows);
+  writeSummary("data-store restore", ["Source", ...sources], [
+    ["Status", ...statuses],
+    ["Cache key", ...keys]
+  ]);
 }
 run().catch((err) => {
   setFailed(err instanceof Error ? err.message : String(err));

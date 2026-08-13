@@ -3,6 +3,7 @@ import { restoreCache } from "@actions/cache";
 import {
   buildCacheKeys,
   parseSources,
+  shortCacheKey,
   sourcePaths,
   writeSummary,
 } from "./shared";
@@ -13,21 +14,27 @@ async function run(): Promise<void> {
     core.getInput("source") || undefined
   );
 
-  const rows: string[][] = [];
+  const statuses: string[] = [];
+  const keys: string[] = [];
   for (const src of sources) {
     const { sentinel, prefix } = buildCacheKeys(src);
     core.info(`[${src}] Restoring from cache...`);
     const matchedKey = await restoreCache(sourcePaths(src), sentinel, [prefix]);
     if (matchedKey) {
       core.info(`[${src}] Restored (key: ${matchedKey})`);
-      rows.push([src, "hit", matchedKey]);
+      statuses.push("hit");
+      keys.push(shortCacheKey(src, matchedKey));
     } else {
       core.info(`[${src}] No cache found, skipped`);
-      rows.push([src, "miss", "—"]);
+      statuses.push("miss");
+      keys.push("—");
     }
   }
 
-  writeSummary("data-store restore", ["Source", "Status", "Cache key"], rows);
+  writeSummary("data-store restore", ["Source", ...sources], [
+    ["Status", ...statuses],
+    ["Cache key", ...keys],
+  ]);
 }
 
 run().catch((err: unknown) => {

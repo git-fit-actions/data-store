@@ -17,6 +17,7 @@ const {
   listDataFiles,
   buildSummaryMarkdown,
   writeSummary,
+  shortCacheKey,
 } = require("../dist/shared.cjs");
 
 function tmpdir() {
@@ -374,4 +375,52 @@ test("writeSummary: fails fast when target is missing", () => {
   } finally {
     Object.assign(process.env, saved);
   }
+});
+
+// ── shortCacheKey ──
+
+test("shortCacheKey: strips the source prefix, keeps run-id segment", () => {
+  assert.equal(
+    shortCacheKey("keep", "GitFit-data-keep-v0-465-31605754520"),
+    "465-31605754520"
+  );
+});
+
+test("shortCacheKey: preserves the snapshot marker", () => {
+  assert.equal(
+    shortCacheKey("keep", "GitFit-data-keep-v0-snapshot-11-31563297179"),
+    "snapshot-11-31563297179"
+  );
+});
+
+test("shortCacheKey: keeps run attempt suffix", () => {
+  assert.equal(
+    shortCacheKey("xoss", "GitFit-data-xoss-v0-1-2-2"),
+    "1-2-2"
+  );
+});
+
+test("shortCacheKey: empty key maps to em dash (miss)", () => {
+  assert.equal(shortCacheKey("keep", ""), "—");
+});
+
+test("shortCacheKey: unknown key shape returned unchanged", () => {
+  assert.equal(shortCacheKey("keep", "other-key"), "other-key");
+});
+
+test("buildSummaryMarkdown: transposed multi-source layout (sources as columns)", () => {
+  const md = buildSummaryMarkdown(
+    "data-store save",
+    ["Source", "keep", "igpsport", "xoss"],
+    [
+      ["Status", "saved", "unchanged", "saved"],
+      ["Cache key", "465-31605754520", "—", "465-31605754521"],
+    ],
+    "Changed: 2 / Unchanged: 1 / Errors: 0"
+  );
+  assert.match(md, /^### GitFit data-store save\n/);
+  assert.match(md, /\| Source \| keep \| igpsport \| xoss \|/);
+  assert.match(md, /\| Status \| saved \| unchanged \| saved \|/);
+  assert.match(md, /\| Cache key \| 465-31605754520 \| — \| 465-31605754521 \|/);
+  assert.match(md, /Changed: 2 \/ Unchanged: 1 \/ Errors: 0/);
 });

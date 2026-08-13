@@ -67474,6 +67474,13 @@ function writeSummary(heading, headers, rows, footer, filePath) {
   }
   fs7.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
 }
+function shortCacheKey(source, key) {
+  if (!key) {
+    return "\u2014";
+  }
+  const prefix2 = `GitFit-data-${source}-v0-`;
+  return key.startsWith(prefix2) ? key.slice(prefix2.length) : key;
+}
 
 // src/save.ts
 async function run() {
@@ -67485,14 +67492,16 @@ async function run() {
   const changedSources = [];
   const unchangedSources = [];
   const failedSources = [];
-  const rows = [];
+  const statuses = [];
+  const keys = [];
   for (const src of sources) {
     const dirs = sourcePaths(src).filter(isDirectory2);
     if (dirs.length === 0) {
       info(`[${src}] No managed directories exist, skipping`);
       setOutput(`changed_${src}`, "false");
       unchangedSources.push(src);
-      rows.push([src, "skipped", "\u2014"]);
+      statuses.push("skipped");
+      keys.push("\u2014");
       continue;
     }
     let srcChanged = false;
@@ -67513,18 +67522,21 @@ async function run() {
       const saved = await saveCache2(dirs, runKey);
       if (saved) {
         info(`[${src}] Saved (key: ${runKey})`);
-        rows.push([src, "saved", runKey]);
+        statuses.push("saved");
+        keys.push(shortCacheKey(src, runKey));
       } else {
         failedSources.push(src);
         warning(
           `[${src}] Save failed: another job may be creating this cache (key: ${runKey}); data is unchanged locally`
         );
-        rows.push([src, "failed", runKey]);
+        statuses.push("failed");
+        keys.push(shortCacheKey(src, runKey));
       }
     } else {
       unchangedSources.push(src);
       info(`[${src}] Unchanged, skipped`);
-      rows.push([src, "unchanged", "\u2014"]);
+      statuses.push("unchanged");
+      keys.push("\u2014");
     }
   }
   setOutput("changed", anyChanged ? "true" : "false");
@@ -67532,7 +67544,15 @@ async function run() {
   setOutput("unchanged_sources", unchangedSources.join(","));
   setOutput("save_errors", failedSources.join(","));
   const footer = `Changed: ${changedSources.length} / Unchanged: ${unchangedSources.length} / Errors: ${failedSources.length}`;
-  writeSummary("data-store save", ["Source", "Status", "Cache key"], rows, footer);
+  writeSummary(
+    "data-store save",
+    ["Source", ...sources],
+    [
+      ["Status", ...statuses],
+      ["Cache key", ...keys]
+    ],
+    footer
+  );
 }
 run().catch((err) => {
   setFailed(err instanceof Error ? err.message : String(err));
