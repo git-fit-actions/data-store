@@ -31,10 +31,16 @@ async function run(): Promise<void> {
     }
   }
 
-  writeSummary("data-store restore", ["Source", ...sources], [
-    ["Status", ...statuses],
-    ["Cache key", ...keys],
-  ]);
+  writeSummary(
+    "data-store restore",
+    ["Source", ...sources],
+    [
+      ["Status", ...statuses],
+      ["Cache key", ...keys],
+    ],
+    undefined,
+    ["left", ...sources.map(() => "center" as const)]
+  );
 }
 
 run().catch((err: unknown) => {

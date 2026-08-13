@@ -87,7 +87,8 @@ async function run(): Promise<void> {
       ["Status", ...statuses],
       ["Cache key", ...keys],
     ],
-    footer
+    footer,
+    ["left", ...sources.map(() => "center" as const)]
   );
 }
 

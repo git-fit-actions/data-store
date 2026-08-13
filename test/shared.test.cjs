@@ -343,6 +343,7 @@ test("writeSummary: writes built markdown to the target file", () => {
       ["garmin", "unchanged", "—"],
     ],
     "Changed: 1 / Unchanged: 1 / Errors: 0",
+    ["left", "center", "center"],
     target
   );
   const content = fs.readFileSync(target, "utf8");
@@ -416,11 +417,34 @@ test("buildSummaryMarkdown: transposed multi-source layout (sources as columns)"
       ["Status", "saved", "unchanged", "saved"],
       ["Cache key", "465-31605754520", "—", "465-31605754521"],
     ],
-    "Changed: 2 / Unchanged: 1 / Errors: 0"
+    "Changed: 2 / Unchanged: 1 / Errors: 0",
+    ["left", "center", "center", "center"]
   );
   assert.match(md, /^### GitFit data-store save\n/);
   assert.match(md, /\| Source \| keep \| igpsport \| xoss \|/);
+  assert.match(md, /\| --- \| :---: \| :---: \| :---: \|/);
   assert.match(md, /\| Status \| saved \| unchanged \| saved \|/);
   assert.match(md, /\| Cache key \| 465-31605754520 \| — \| 465-31605754521 \|/);
   assert.match(md, /Changed: 2 \/ Unchanged: 1 \/ Errors: 0/);
+});
+
+test("buildSummaryMarkdown: mixed alignment — left label, centered data", () => {
+  const md = buildSummaryMarkdown(
+    "data-store restore",
+    ["Source", "keep", "igpsport"],
+    [["Status", "hit", "miss"]],
+    undefined,
+    ["left", "center", "center"]
+  );
+  assert.match(md, /\| --- \| :---: \| :---: \|/);
+  assert.match(md, /^#/);
+});
+
+test("buildSummaryMarkdown: defaults to left alignment when omitted", () => {
+  const md = buildSummaryMarkdown(
+    "data-store restore",
+    ["Source", "keep"],
+    [["Status", "hit"]]
+  );
+  assert.match(md, /\| --- \| --- \|/);
 });

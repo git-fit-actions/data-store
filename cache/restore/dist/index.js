@@ -66730,9 +66730,14 @@ function buildCacheKeys(source) {
 function sourcePaths(source) {
   return [`data/raw/${source}`, `data/std/${source}`];
 }
-function buildSummaryMarkdown(heading, headers, rows, footer) {
+function buildSummaryMarkdown(heading, headers, rows, footer, alignments) {
   const escape2 = (s) => s.replace(/\|/g, "\\|");
-  const separator = headers.map(() => "---").join(" | ");
+  const separator = headers.map((_, i) => {
+    const a = alignments?.[i];
+    if (a === "center") return ":---:";
+    if (a === "right") return "---:";
+    return "---";
+  }).join(" | ");
   const lines = [
     `### GitFit ${heading}`,
     "",
@@ -66747,14 +66752,17 @@ function buildSummaryMarkdown(heading, headers, rows, footer) {
   }
   return lines.join("\n");
 }
-function writeSummary(heading, headers, rows, footer, filePath) {
+function writeSummary(heading, headers, rows, footer, alignments, filePath) {
   const target = filePath || process.env.GITHUB_STEP_SUMMARY;
   if (!target) {
     throw new Error(
       "GITHUB_STEP_SUMMARY is not set \u2014 step summaries require a GitHub Actions runtime"
     );
   }
-  fs5.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
+  fs5.writeFileSync(
+    target,
+    buildSummaryMarkdown(heading, headers, rows, footer, alignments)
+  );
 }
 function shortCacheKey(source, key) {
   if (!key) {
@@ -66786,10 +66794,16 @@ async function run() {
       keys.push("\u2014");
     }
   }
-  writeSummary("data-store restore", ["Source", ...sources], [
-    ["Status", ...statuses],
-    ["Cache key", ...keys]
-  ]);
+  writeSummary(
+    "data-store restore",
+    ["Source", ...sources],
+    [
+      ["Status", ...statuses],
+      ["Cache key", ...keys]
+    ],
+    void 0,
+    ["left", ...sources.map(() => "center")]
+  );
 }
 run().catch((err) => {
   setFailed(err instanceof Error ? err.message : String(err));

@@ -234,6 +234,8 @@ export function generateSHA256SUMS(dir: string): void {
   fs.writeFileSync(path.join(dir, "SHA256SUMS"), content);
 }
 
+export type TableAlign = "left" | "center" | "right";
+
 /**
  * Build a markdown step-summary block for a git-fit action. Pure function
  * (no @actions/core I/O) so it is unit-testable:
@@ -241,22 +243,32 @@ export function generateSHA256SUMS(dir: string): void {
  *   ### GitFit <heading>
  *
  *   | header1 | header2 |
- *   |---------|---------|
+ *   |---------|:-------:|
  *   | a       | b       |
  *
  *   <footer>
  *
  * Pipe characters in cell values are escaped so untrusted inputs cannot
- * break the table layout.
+ * break the table layout. Per-column alignment (`alignments`) follows the
+ * org convention: short categorical values / numbers / tokens are centered,
+ * paths / labels / long text are left-aligned.
  */
 export function buildSummaryMarkdown(
   heading: string,
   headers: string[],
   rows: string[][],
-  footer?: string
+  footer?: string,
+  alignments?: TableAlign[]
 ): string {
   const escape = (s: string): string => s.replace(/\|/g, "\\|");
-  const separator = headers.map(() => "---").join(" | ");
+  const separator = headers
+    .map((_, i) => {
+      const a = alignments?.[i];
+      if (a === "center") return ":---:";
+      if (a === "right") return "---:";
+      return "---";
+    })
+    .join(" | ");
   const lines: string[] = [
     `### GitFit ${heading}`,
     "",
@@ -283,6 +295,7 @@ export function writeSummary(
   headers: string[],
   rows: string[][],
   footer?: string,
+  alignments?: TableAlign[],
   filePath?: string
 ): void {
   const target = filePath || process.env.GITHUB_STEP_SUMMARY;
@@ -291,7 +304,10 @@ export function writeSummary(
       "GITHUB_STEP_SUMMARY is not set — step summaries require a GitHub Actions runtime"
     );
   }
-  fs.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
+  fs.writeFileSync(
+    target,
+    buildSummaryMarkdown(heading, headers, rows, footer, alignments)
+  );
 }
 
 /**
