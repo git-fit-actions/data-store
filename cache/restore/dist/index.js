@@ -66658,6 +66658,7 @@ function restoreCacheV2(paths_1, primaryKey_1, restoreKeys_1, options_1) {
 }
 
 // src/shared.ts
+var fs5 = __toESM(require("fs"));
 var SOURCE_RE = /^[a-z0-9][a-z0-9_-]*$/;
 var RESERVED_SOURCE_NAMES = /* @__PURE__ */ new Set([
   "source",
@@ -66729,6 +66730,32 @@ function buildCacheKeys(source) {
 function sourcePaths(source) {
   return [`data/raw/${source}`, `data/std/${source}`];
 }
+function buildSummaryMarkdown(heading, headers, rows, footer) {
+  const escape2 = (s) => s.replace(/\|/g, "\\|");
+  const separator = headers.map(() => "---").join(" | ");
+  const lines = [
+    `### GitFit ${heading}`,
+    "",
+    `| ${headers.map(escape2).join(" | ")} |`,
+    `| ${separator} |`
+  ];
+  for (const row of rows) {
+    lines.push(`| ${row.map(escape2).join(" | ")} |`);
+  }
+  if (footer) {
+    lines.push("", footer);
+  }
+  return lines.join("\n");
+}
+function writeSummary(heading, headers, rows, footer, filePath) {
+  const target = filePath || process.env.GITHUB_STEP_SUMMARY;
+  if (!target) {
+    throw new Error(
+      "GITHUB_STEP_SUMMARY is not set \u2014 step summaries require a GitHub Actions runtime"
+    );
+  }
+  fs5.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
+}
 
 // src/restore.ts
 async function run() {
@@ -66736,16 +66763,20 @@ async function run() {
     getInput("sources") || void 0,
     getInput("source") || void 0
   );
+  const rows = [];
   for (const src of sources) {
     const { sentinel, prefix: prefix2 } = buildCacheKeys(src);
     info(`[${src}] Restoring from cache...`);
     const matchedKey = await restoreCache(sourcePaths(src), sentinel, [prefix2]);
     if (matchedKey) {
       info(`[${src}] Restored (key: ${matchedKey})`);
+      rows.push([src, "hit", matchedKey]);
     } else {
       info(`[${src}] No cache found, skipped`);
+      rows.push([src, "miss", "\u2014"]);
     }
   }
+  writeSummary("data-store restore", ["Source", "Status", "Cache key"], rows);
 }
 run().catch((err) => {
   setFailed(err instanceof Error ? err.message : String(err));

@@ -15,6 +15,8 @@ const {
   compareChecksums,
   generateSHA256SUMS,
   listDataFiles,
+  buildSummaryMarkdown,
+  writeSummary,
 } = require("../dist/shared.cjs");
 
 function tmpdir() {
@@ -290,4 +292,86 @@ test("generateSHA256SUMS: idempotent", () => {
     fs.readFileSync(path.join(dir, "SHA256SUMS"), "utf8"),
     first
   );
+});
+
+// ── buildSummaryMarkdown ──
+
+test("buildSummaryMarkdown: renders heading, header, rows and footer", () => {
+  const md = buildSummaryMarkdown(
+    "data-store save",
+    ["Source", "Status", "Cache key"],
+    [
+      ["keep", "saved", "GitFit-data-keep-v0-42-999"],
+      ["garmin", "unchanged", "—"],
+    ],
+    "Changed: 1 / Unchanged: 1 / Errors: 0"
+  );
+  assert.match(md, /^### GitFit data-store save\n/);
+  assert.match(md, /\| Source \| Status \| Cache key \|/);
+  assert.match(md, /\| keep \| saved \| GitFit-data-keep-v0-42-999 \|/);
+  assert.match(md, /\| garmin \| unchanged \| — \|/);
+  assert.match(md, /Changed: 1 \/ Unchanged: 1 \/ Errors: 0/);
+});
+
+test("buildSummaryMarkdown: optional footer omitted", () => {
+  const md = buildSummaryMarkdown(
+    "data-store restore",
+    ["Source", "Status", "Cache key"],
+    [["keep", "miss", "—"]]
+  );
+  assert.ok(!md.includes("Changed:"));
+  assert.ok(md.endsWith("|"));
+});
+
+test("buildSummaryMarkdown: escapes pipe characters in cells", () => {
+  const md = buildSummaryMarkdown(
+    "data-store save",
+    ["Source", "Status", "Cache key"],
+    [["a|b", "saved", "key"]]
+  );
+  assert.match(md, /a\\\|b/);
+});
+
+test("writeSummary: writes built markdown to the target file", () => {
+  const target = path.join(tmpdir(), "summary.md");
+  writeSummary(
+    "data-store save",
+    ["Source", "Status", "Cache key"],
+    [
+      ["keep", "saved", "GitFit-data-keep-v0-42-999"],
+      ["garmin", "unchanged", "—"],
+    ],
+    "Changed: 1 / Unchanged: 1 / Errors: 0",
+    target
+  );
+  const content = fs.readFileSync(target, "utf8");
+  assert.match(content, /^### GitFit data-store save\n/);
+  assert.match(content, /\| keep \| saved \| GitFit-data-keep-v0-42-999 \|/);
+  assert.match(content, /Changed: 1 \/ Unchanged: 1 \/ Errors: 0/);
+});
+
+test("writeSummary: uses GITHUB_STEP_SUMMARY env when no path given", () => {
+  const saved = { ...process.env };
+  try {
+    const target = path.join(tmpdir(), "summary.md");
+    fs.writeFileSync(target, "");
+    process.env.GITHUB_STEP_SUMMARY = target;
+    writeSummary("data-store restore", ["Source", "Status", "Cache key"], [["keep", "miss", "—"]]);
+    assert.match(fs.readFileSync(target, "utf8"), /^### GitFit data-store restore\n/);
+  } finally {
+    Object.assign(process.env, saved);
+  }
+});
+
+test("writeSummary: fails fast when target is missing", () => {
+  const saved = { ...process.env };
+  try {
+    delete process.env.GITHUB_STEP_SUMMARY;
+    assert.throws(
+      () => writeSummary("data-store restore", ["Source"], [["x"]]),
+      /GITHUB_STEP_SUMMARY is not set/
+    );
+  } finally {
+    Object.assign(process.env, saved);
+  }
 });

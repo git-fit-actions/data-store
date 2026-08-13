@@ -33,6 +33,7 @@ __export(shared_exports, {
   SOURCE_RE: () => SOURCE_RE,
   ValidationError: () => ValidationError,
   buildCacheKeys: () => buildCacheKeys,
+  buildSummaryMarkdown: () => buildSummaryMarkdown,
   compareChecksums: () => compareChecksums,
   computeChecksumMap: () => computeChecksumMap,
   generateSHA256SUMS: () => generateSHA256SUMS,
@@ -42,7 +43,8 @@ __export(shared_exports, {
   listDataFiles: () => listDataFiles,
   parseChecksumFile: () => parseChecksumFile,
   parseSources: () => parseSources,
-  sourcePaths: () => sourcePaths
+  sourcePaths: () => sourcePaths,
+  writeSummary: () => writeSummary
 });
 module.exports = __toCommonJS(shared_exports);
 var crypto = __toESM(require("crypto"));
@@ -214,11 +216,38 @@ function generateSHA256SUMS(dir) {
 ` : "";
   fs.writeFileSync(path.join(dir, "SHA256SUMS"), content);
 }
+function buildSummaryMarkdown(heading, headers, rows, footer) {
+  const escape = (s) => s.replace(/\|/g, "\\|");
+  const separator = headers.map(() => "---").join(" | ");
+  const lines = [
+    `### GitFit ${heading}`,
+    "",
+    `| ${headers.map(escape).join(" | ")} |`,
+    `| ${separator} |`
+  ];
+  for (const row of rows) {
+    lines.push(`| ${row.map(escape).join(" | ")} |`);
+  }
+  if (footer) {
+    lines.push("", footer);
+  }
+  return lines.join("\n");
+}
+function writeSummary(heading, headers, rows, footer, filePath) {
+  const target = filePath || process.env.GITHUB_STEP_SUMMARY;
+  if (!target) {
+    throw new Error(
+      "GITHUB_STEP_SUMMARY is not set \u2014 step summaries require a GitHub Actions runtime"
+    );
+  }
+  fs.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   SOURCE_RE,
   ValidationError,
   buildCacheKeys,
+  buildSummaryMarkdown,
   compareChecksums,
   computeChecksumMap,
   generateSHA256SUMS,
@@ -228,5 +257,6 @@ function generateSHA256SUMS(dir) {
   listDataFiles,
   parseChecksumFile,
   parseSources,
-  sourcePaths
+  sourcePaths,
+  writeSummary
 });

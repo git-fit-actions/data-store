@@ -67448,6 +67448,32 @@ function generateSHA256SUMS(dir) {
 ` : "";
   fs7.writeFileSync(path11.join(dir, "SHA256SUMS"), content);
 }
+function buildSummaryMarkdown(heading, headers, rows, footer) {
+  const escape2 = (s) => s.replace(/\|/g, "\\|");
+  const separator = headers.map(() => "---").join(" | ");
+  const lines = [
+    `### GitFit ${heading}`,
+    "",
+    `| ${headers.map(escape2).join(" | ")} |`,
+    `| ${separator} |`
+  ];
+  for (const row of rows) {
+    lines.push(`| ${row.map(escape2).join(" | ")} |`);
+  }
+  if (footer) {
+    lines.push("", footer);
+  }
+  return lines.join("\n");
+}
+function writeSummary(heading, headers, rows, footer, filePath) {
+  const target = filePath || process.env.GITHUB_STEP_SUMMARY;
+  if (!target) {
+    throw new Error(
+      "GITHUB_STEP_SUMMARY is not set \u2014 step summaries require a GitHub Actions runtime"
+    );
+  }
+  fs7.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
+}
 
 // src/save.ts
 async function run() {
@@ -67459,12 +67485,14 @@ async function run() {
   const changedSources = [];
   const unchangedSources = [];
   const failedSources = [];
+  const rows = [];
   for (const src of sources) {
     const dirs = sourcePaths(src).filter(isDirectory2);
     if (dirs.length === 0) {
       info(`[${src}] No managed directories exist, skipping`);
       setOutput(`changed_${src}`, "false");
       unchangedSources.push(src);
+      rows.push([src, "skipped", "\u2014"]);
       continue;
     }
     let srcChanged = false;
@@ -67485,21 +67513,26 @@ async function run() {
       const saved = await saveCache2(dirs, runKey);
       if (saved) {
         info(`[${src}] Saved (key: ${runKey})`);
+        rows.push([src, "saved", runKey]);
       } else {
         failedSources.push(src);
         warning(
           `[${src}] Save failed: another job may be creating this cache (key: ${runKey}); data is unchanged locally`
         );
+        rows.push([src, "failed", runKey]);
       }
     } else {
       unchangedSources.push(src);
       info(`[${src}] Unchanged, skipped`);
+      rows.push([src, "unchanged", "\u2014"]);
     }
   }
   setOutput("changed", anyChanged ? "true" : "false");
   setOutput("changed_sources", changedSources.join(","));
   setOutput("unchanged_sources", unchangedSources.join(","));
   setOutput("save_errors", failedSources.join(","));
+  const footer = `Changed: ${changedSources.length} / Unchanged: ${unchangedSources.length} / Errors: ${failedSources.length}`;
+  writeSummary("data-store save", ["Source", "Status", "Cache key"], rows, footer);
 }
 run().catch((err) => {
   setFailed(err instanceof Error ? err.message : String(err));

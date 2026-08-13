@@ -94,6 +94,20 @@ Reserved source names (rejected): `source`, `sources`, `changed`,
 The write-once action exposes no outputs (post outputs are not readable by
 earlier steps).
 
+## Step summaries
+
+Both actions append a markdown block to the job step summary:
+
+- `cache/restore` → `### GitFit data-store restore`, one row per source
+  (`| Source | Status | Cache key |`); status is `hit` (with the matched key) or
+  `miss`.
+- `cache/save` → `### GitFit data-store save`, one row per source plus a
+  `Changed: N / Unchanged: M / Errors: K` footer; status is `saved`, `unchanged`,
+  `skipped` (no managed directories) or `failed`.
+
+The write-once root action produces both blocks: restore in `main`, save in
+`post` (post cannot surface outputs, so the summary is the only channel).
+
 ## Cache key scheme
 
 All keys share a `GitFit-data-<source>-v0-` prefix. `cache/restore` never writes a cache:

@@ -233,3 +233,63 @@ export function generateSHA256SUMS(dir: string): void {
   const content = lines.length > 0 ? `${lines.join("\n")}\n` : "";
   fs.writeFileSync(path.join(dir, "SHA256SUMS"), content);
 }
+
+/**
+ * Build a markdown step-summary block for a git-fit action. Pure function
+ * (no @actions/core I/O) so it is unit-testable:
+ *
+ *   ### GitFit <heading>
+ *
+ *   | header1 | header2 |
+ *   |---------|---------|
+ *   | a       | b       |
+ *
+ *   <footer>
+ *
+ * Pipe characters in cell values are escaped so untrusted inputs cannot
+ * break the table layout.
+ */
+export function buildSummaryMarkdown(
+  heading: string,
+  headers: string[],
+  rows: string[][],
+  footer?: string
+): string {
+  const escape = (s: string): string => s.replace(/\|/g, "\\|");
+  const separator = headers.map(() => "---").join(" | ");
+  const lines: string[] = [
+    `### GitFit ${heading}`,
+    "",
+    `| ${headers.map(escape).join(" | ")} |`,
+    `| ${separator} |`,
+  ];
+  for (const row of rows) {
+    lines.push(`| ${row.map(escape).join(" | ")} |`);
+  }
+  if (footer) {
+    lines.push("", footer);
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Write a step-summary block to `$GITHUB_STEP_SUMMARY` (or an explicit path,
+ * for tests). Overwrites the file with just this block — the caller's step
+ * owns its summary file, so a single write is all that is needed. Missing
+ * target fails fast with an actionable message.
+ */
+export function writeSummary(
+  heading: string,
+  headers: string[],
+  rows: string[][],
+  footer?: string,
+  filePath?: string
+): void {
+  const target = filePath || process.env.GITHUB_STEP_SUMMARY;
+  if (!target) {
+    throw new Error(
+      "GITHUB_STEP_SUMMARY is not set — step summaries require a GitHub Actions runtime"
+    );
+  }
+  fs.writeFileSync(target, buildSummaryMarkdown(heading, headers, rows, footer));
+}
