@@ -30,6 +30,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/shared.ts
 var shared_exports = {};
 __export(shared_exports, {
+  LEGEND: () => LEGEND,
   SOURCE_RE: () => SOURCE_RE,
   ValidationError: () => ValidationError,
   buildCacheKeys: () => buildCacheKeys,
@@ -37,10 +38,12 @@ __export(shared_exports, {
   compareChecksums: () => compareChecksums,
   computeChecksumMap: () => computeChecksumMap,
   generateSHA256SUMS: () => generateSHA256SUMS,
+  glyphFor: () => glyphFor,
   hashFile: () => hashFile,
   isDirectory: () => isDirectory,
   isFile: () => isFile,
   listDataFiles: () => listDataFiles,
+  needsLegend: () => needsLegend,
   parseChecksumFile: () => parseChecksumFile,
   parseSources: () => parseSources,
   shortCacheKey: () => shortCacheKey,
@@ -251,6 +254,42 @@ function writeSummary(heading, headers, rows, footer, alignments, filePath) {
     buildSummaryMarkdown(heading, headers, rows, footer, alignments)
   );
 }
+var LEGEND = "_\u2705 \u6B63\u5E38\u4EA7\u51FA \xB7 \u23ED\uFE0F \u9884\u6599\u5185\u65E0\u53D8\u5316/\u515C\u5E95 \xB7 \u274C \u5931\u8D25_";
+var GLYPH_OK = /* @__PURE__ */ new Set([
+  "hit",
+  "ok",
+  "saved",
+  "imported",
+  "attempted",
+  "changed",
+  "pushed",
+  "present",
+  "cache"
+]);
+var GLYPH_SKIP = /* @__PURE__ */ new Set([
+  "miss",
+  "skipped",
+  "unchanged",
+  "none",
+  "git"
+]);
+var GLYPH_FAIL = /* @__PURE__ */ new Set(["failed", "errors", "missing"]);
+var LEGEND_TRIGGER = /* @__PURE__ */ new Set(["miss", "failed", "errors", "missing"]);
+function needsLegend(statuses) {
+  return statuses.some((s) => LEGEND_TRIGGER.has(s.split(/\s/)[0]));
+}
+function glyphFor(status) {
+  if (GLYPH_OK.has(status) || GLYPH_OK.has(status.split(/\s/)[0])) {
+    return `\u2705 ${status}`;
+  }
+  if (GLYPH_SKIP.has(status) || GLYPH_SKIP.has(status.split(/\s/)[0])) {
+    return `\u23ED\uFE0F ${status}`;
+  }
+  if (GLYPH_FAIL.has(status) || GLYPH_FAIL.has(status.split(/\s/)[0])) {
+    return `\u274C ${status}`;
+  }
+  return status;
+}
 function shortCacheKey(source, key) {
   if (!key) {
     return "\u2014";
@@ -260,6 +299,7 @@ function shortCacheKey(source, key) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  LEGEND,
   SOURCE_RE,
   ValidationError,
   buildCacheKeys,
@@ -267,10 +307,12 @@ function shortCacheKey(source, key) {
   compareChecksums,
   computeChecksumMap,
   generateSHA256SUMS,
+  glyphFor,
   hashFile,
   isDirectory,
   isFile,
   listDataFiles,
+  needsLegend,
   parseChecksumFile,
   parseSources,
   shortCacheKey,

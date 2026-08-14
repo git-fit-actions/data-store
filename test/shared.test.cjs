@@ -18,6 +18,9 @@ const {
   buildSummaryMarkdown,
   writeSummary,
   shortCacheKey,
+  glyphFor,
+  needsLegend,
+  LEGEND,
 } = require("../dist/shared.cjs");
 
 function tmpdir() {
@@ -448,3 +451,64 @@ test("buildSummaryMarkdown: defaults to left alignment when omitted", () => {
   );
   assert.match(md, /\| --- \| --- \|/);
 });
+
+// ── glyphFor / LEGEND ──
+
+test("glyphFor: ok statuses get green check", () => {
+  for (const s of ["hit", "ok", "saved", "imported", "attempted", "changed", "pushed", "present", "cache"]) {
+    assert.equal(glyphFor(s), `✅ ${s}`);
+  }
+});
+
+test("glyphFor: neutral statuses get skip glyph", () => {
+  for (const s of ["miss", "skipped", "unchanged", "none", "git"]) {
+    assert.equal(glyphFor(s), `⏭️ ${s}`);
+  }
+});
+
+test("glyphFor: skipped (unchanged) matched by leading word", () => {
+  assert.equal(glyphFor("skipped (unchanged)"), "⏭️ skipped (unchanged)");
+});
+
+test("glyphFor: fail statuses get cross", () => {
+  for (const s of ["failed", "errors", "missing"]) {
+    assert.equal(glyphFor(s), `❌ ${s}`);
+  }
+});
+
+test("glyphFor: unknown status passes through unlabeled", () => {
+  assert.equal(glyphFor("unknown-thing"), "unknown-thing");
+});
+
+test("LEGEND: single shared string documents all three glyphs", () => {
+  assert.match(LEGEND, /✅/);
+  assert.match(LEGEND, /⏭️/);
+  assert.match(LEGEND, /❌/);
+  assert.ok(!LEGEND.includes("\n"), "legend is a single line");
+});
+
+test("needsLegend: true when any attention status present", () => {
+  assert.equal(needsLegend(["hit", "miss"]), true);
+  assert.equal(needsLegend(["saved", "failed"]), true);
+  assert.equal(needsLegend(["failed"]), true);
+  assert.equal(needsLegend(["missing"]), true);
+  assert.equal(needsLegend(["errors"]), true);
+});
+
+test("needsLegend: false for all-normal blocks", () => {
+  assert.equal(needsLegend(["hit"]), false);
+  assert.equal(needsLegend(["saved", "unchanged", "skipped"]), false);
+  assert.equal(needsLegend(["hit", "unchanged", "skipped (unchanged)"]), false);
+  assert.equal(needsLegend([]), false);
+});
+
+test("buildSummaryMarkdown: multiline footer renders legend after blank line", () => {
+  const md = buildSummaryMarkdown(
+    "data-store save",
+    ["Source", "keep"],
+    [["Status", "✅ saved"]],
+    `Changed: 1 / Unchanged: 0 / Errors: 0\n\n${LEGEND}`
+  );
+  assert.match(md, /Changed: 1 \/ Unchanged: 0 \/ Errors: 0\n\n_✅/);
+});
+

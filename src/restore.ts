@@ -2,6 +2,9 @@ import * as core from "@actions/core";
 import { restoreCache } from "@actions/cache";
 import {
   buildCacheKeys,
+  glyphFor,
+  LEGEND,
+  needsLegend,
   parseSources,
   shortCacheKey,
   sourcePaths,
@@ -35,10 +38,10 @@ async function run(): Promise<void> {
     "data-store restore",
     ["Source", ...sources],
     [
-      ["Status", ...statuses],
+      ["Status", ...statuses.map(glyphFor)],
       ["Cache key", ...keys],
     ],
-    undefined,
+    needsLegend(statuses) ? LEGEND : undefined,
     ["left", ...sources.map(() => "center" as const)]
   );
 }

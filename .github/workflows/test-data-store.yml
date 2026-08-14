@@ -2,7 +2,8 @@ name: Test data-store
 
 on:
   push:
-    branches: [master]
+    branches: [mainline]
+  workflow_dispatch:
 
 permissions:
   contents: read

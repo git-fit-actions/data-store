@@ -4,7 +4,10 @@ import {
   buildCacheKeys,
   compareChecksums,
   generateSHA256SUMS,
+  glyphFor,
   isDirectory,
+  LEGEND,
+  needsLegend,
   parseSources,
   shortCacheKey,
   sourcePaths,
@@ -79,12 +82,13 @@ async function run(): Promise<void> {
   core.setOutput("unchanged_sources", unchangedSources.join(","));
   core.setOutput("save_errors", failedSources.join(","));
 
-  const footer = `Changed: ${changedSources.length} / Unchanged: ${unchangedSources.length} / Errors: ${failedSources.length}`;
+  const legend = needsLegend(statuses) ? `\n\n${LEGEND}` : "";
+  const footer = `Changed: ${changedSources.length} / Unchanged: ${unchangedSources.length} / Errors: ${failedSources.length}${legend}`;
   writeSummary(
     "data-store save",
     ["Source", ...sources],
     [
-      ["Status", ...statuses],
+      ["Status", ...statuses.map(glyphFor)],
       ["Cache key", ...keys],
     ],
     footer,
